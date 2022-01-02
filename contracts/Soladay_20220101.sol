@@ -21,8 +21,8 @@ contract Soladay_20220101 {
      * @param _timestamp Timestamp of current block of deployment, 
      */
     event SolidayContractDeployed(
-        address indexed _deployer,
-        address indexed _contract, 
+        address indexed _contract,
+        address indexed _deployer, 
         uint256 _timestamp
     );
 
@@ -32,6 +32,7 @@ contract Soladay_20220101 {
 
     address public owner;
     bool public locked;
+    address[] deployers;
     mapping( address => address[] ) deployments;
 
     /*******************
@@ -58,13 +59,45 @@ contract Soladay_20220101 {
         locked = false;
     }
 
+    function getOwner() public view returns (address) {
+        return owner;
+    }
+
     function setOwner(address _newOwner) public onlyOwner validAddress(_newOwner) {
         owner = _newOwner;
     }
 
+    function getDeployers() public view returns (address[] memory) {
+        return deployers;
+    }
+
+    function getDeployments(address _deployer) public view returns (address[] memory) {
+        return deployments[_deployer];
+    }
+
     function registerDeployment(address _contract, address _deployer, uint256 _timestamp) public noReentrancy
     {
-        // how do I check for multiple instances of the same deployment?
+        // find deployer
+        // TODO:    this feels redundant and a waste of storage.  I should be able to extract this data from
+        //          the emitted events, but I dont know how yet.  Since I expect I'll need to migrate this data
+        //          to a new contract, I'm being overly cautious on this first pass and storinga deployer list.
+        //          honestly, it should just be me on this list, but who knows these days.
+
+        bool hasDeployed = false;
+        for(uint256 i = 0; i < deployers.length; i++)
+        {
+            if(_deployer == deployers[i])
+            {
+                hasDeployed = true;
+            }
+        }
+
+        if(!hasDeployed)
+        {
+            deployers.push(_deployer);
+        }
+
+        // check for dups
         bool duplicateFound = false;
         for(uint256 i = 0; i < deployments[_deployer].length; i++)
         {
@@ -74,20 +107,24 @@ contract Soladay_20220101 {
             }
         }
 
+        // no dup, log it
         if(!duplicateFound)
         {
             deployments[_deployer].push(_contract);
 
             emit SolidayContractDeployed(
-                _deployer,
-                _contract, 
+                _contract,
+                _deployer, 
                 _timestamp
             );
         }
     }
 
-    function listDeployments(address _deployer) public view returns (address[] memory) {
-        return deployments[_deployer];
-    }
+
+
+    // i dont know how to do this yet.  i can just loop for now
+    // function getAllDeployments(address _deployer) public view returns (address[] memory) {
+    //     return deployments[_deployer];
+    // }
 
 }
